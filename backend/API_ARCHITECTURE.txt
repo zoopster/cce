@@ -1,0 +1,150 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    Content Creation Engine - API Architecture                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT LAYER                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Browser / React App / Python Client / cURL                                 │
+│  • HTTP Requests                                                             │
+│  • SSE Event Streams                                                         │
+│  • JSON Payloads                                                             │
+└────────────────────────────────┬────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FASTAPI APPLICATION                                │
+│                          (app/main.py - Port 8000)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • CORS Middleware                                                           │
+│  • OpenAPI Documentation                                                     │
+│  • Health Check Endpoint                                                     │
+└──┬──────────────────┬──────────────────┬──────────────────┬─────────────────┘
+   │                  │                  │                  │
+   ▼                  ▼                  ▼                  ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│  SESSIONS    │ │  RESEARCH    │ │  GENERATE    │ │  PUBLISH     │
+│   ROUTER     │ │   ROUTER     │ │   ROUTER     │ │   ROUTER     │
+├──────────────┤ ├──────────────┤ ├──────────────┤ ├──────────────┤
+│              │ │              │ │              │ │              │
+│ 6 Endpoints  │ │ 3 Endpoints  │ │ 3 Endpoints  │ │ 6 Endpoints  │
+│              │ │   + SSE      │ │  + SSE x2    │ │              │
+│              │ │              │ │              │ │              │
+│ • Create     │ │ • Research   │ │ • Generate   │ │ • WordPress  │
+│ • Get        │ │ • Results    │ │ • Iterate    │ │ • HTML       │
+│ • Delete     │ │ • Synthesis  │ │ • Versions   │ │ • Preview    │
+│ • Agents     │ │              │ │              │ │ • Download   │
+│ • Versions   │ │              │ │              │ │ • Verify     │
+│ • Content    │ │              │ │              │ │ • Markdown   │
+└──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
+       │                │                │                │
+       │                │                │                │
+       └────────────────┼────────────────┼────────────────┘
+                        │                │
+                        ▼                ▼
+              ┌─────────────────────────────────────────┐
+              │         AGENT ORCHESTRATION             │
+              ├─────────────────────────────────────────┤
+              │                                         │
+              │  ┌──────────────────────────────────┐  │
+              │  │        LEAD AGENT                │  │
+              │  │      (Orchestrator)              │  │
+              │  ├──────────────────────────────────┤  │
+              │  │ • Analyze Complexity             │  │
+              │  │ • Create Research Plan           │  │
+              │  │ • Spawn Parallel Subagents       │  │
+              │  │ • Synthesize Findings            │  │
+              │  └────────┬────────┬────────┬────────┘  │
+              │           │        │        │           │
+              │     ┌─────▼──┐ ┌──▼────┐ ┌─▼──────┐   │
+              │     │Research│ │Research│ │Research│   │
+              │     │Subagent│ │Subagent│ │Subagent│   │
+              │     │   #1   │ │   #2   │ │   #3   │   │
+              │     └────────┘ └────────┘ └────────┘   │
+              │                                         │
+              │  ┌──────────────────────────────────┐  │
+              │  │   CONTENT GENERATOR AGENT        │  │
+              │  ├──────────────────────────────────┤  │
+              │  │ • Create Outline                 │  │
+              │  │ • Generate Content (Streaming)   │  │
+              │  │ • Track Versions                 │  │
+              │  └──────────────────────────────────┘  │
+              │                                         │
+              │  ┌──────────────────────────────────┐  │
+              │  │     ITERATOR AGENT               │  │
+              │  ├──────────────────────────────────┤  │
+              │  │ • Analyze Feedback               │  │
+              │  │ • Additional Research (if needed)│  │
+              │  │ • Revise Content (Streaming)     │  │
+              │  └──────────────────────────────────┘  │
+              │                                         │
+              │  ┌──────────────────────────────────┐  │
+              │  │     PUBLISHER AGENT              │  │
+              │  ├──────────────────────────────────┤  │
+              │  │ • WordPress REST API             │  │
+              │  │ • HTML Export                    │  │
+              │  │ • Citation Verification          │  │
+              │  └──────────────────────────────────┘  │
+              │                                         │
+              └─────────────────┬───────────────────────┘
+                                │
+                                ▼
+              ┌─────────────────────────────────────────┐
+              │         FILESYSTEM MEMORY               │
+              ├─────────────────────────────────────────┤
+              │  app/memory/{session_id}/               │
+              │  ├── session.json                       │
+              │  ├── research/                          │
+              │  │   ├── agent_001.json                 │
+              │  │   ├── agent_002.json                 │
+              │  │   └── agent_003.json                 │
+              │  ├── synthesis.json                     │
+              │  └── versions/                          │
+              │      ├── v1.json                        │
+              │      └── v2.json                        │
+              └─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              DATA MODELS                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ContentSession            GenerationParameters        ContentVersion        │
+│  • session_id              • content_type              • version_number      │
+│  • topic                   • tone                      • content             │
+│  • status                  • audience_level            • generated_at        │
+│  • complexity              • word_count                • feedback_applied    │
+│  • research_results        • keywords                                        │
+│  • versions                • custom_instructions                             │
+│  • agents                                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          SSE EVENT STREAMS                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Research Stream:         Generate Stream:         Iterate Stream:          │
+│  • status                 • status                 • status                 │
+│  • complexity             • outline                • analysis               │
+│  • plan                   • content_start          • status (research)      │
+│  • research_progress      • content (chunks)       • content_start          │
+│  • complete               • complete               • content (chunks)       │
+│                                                    • complete               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ENDPOINT SUMMARY:
+  • Total Endpoints: 20
+  • SSE Streaming: 3 (research, generate, iterate)
+  • Routers: 4 (sessions, research, generate, publish)
+  • Lines of Code: 876 (router implementation)
+
+TECHNOLOGY STACK:
+  • FastAPI 0.115.0 - Web framework
+  • Anthropic Claude - AI agent backend
+  • SSE-Starlette - Server-Sent Events
+  • Pydantic 2.9.0 - Data validation
+  • Filesystem - Memory coordination
+
+STATUS: ✅ COMPLETE AND READY FOR USE
+
+═══════════════════════════════════════════════════════════════════════════════

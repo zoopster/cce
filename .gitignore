@@ -1,0 +1,165 @@
+# =============================================================================
+# Content Creation Engine - Root .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python (Backend)
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+backend/venv/
+
+# Python Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# -----------------------------------------------------------------------------
+# Node.js (Frontend)
+# -----------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.yarn
+
+# -----------------------------------------------------------------------------
+# Environment Variables (NEVER commit secrets)
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+backend/.env
+frontend/.env
+
+# Keep example env files
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# -----------------------------------------------------------------------------
+# IDE and Editors
+# -----------------------------------------------------------------------------
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+*.sw?
+*~
+*.sublime-workspace
+*.sublime-project
+
+# -----------------------------------------------------------------------------
+# OS Generated Files
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# Application Data (Session/Memory Storage)
+# -----------------------------------------------------------------------------
+backend/app/memory/*
+frontend/app/memory/*
+!backend/app/memory/.gitkeep
+!frontend/app/memory/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+uvicorn.log
+
+# -----------------------------------------------------------------------------
+# Build Artifacts
+# -----------------------------------------------------------------------------
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.manifest
+*.spec
+
+# Frontend builds
+frontend/dist/
+frontend/build/
+
+# -----------------------------------------------------------------------------
+# Testing & Coverage
+# -----------------------------------------------------------------------------
+coverage/
+*.cover
+*.coverage
+.hypothesis/
+nosetests.xml
+coverage.xml
+*.coveragerc
+
+# -----------------------------------------------------------------------------
+# Documentation builds
+# -----------------------------------------------------------------------------
+docs/_build/
+site/
+
+# -----------------------------------------------------------------------------
+# Claude Code / AI Tools
+# -----------------------------------------------------------------------------
+.claude/
+!.claude/settings.json
+.anthropic/
+
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
+*.bak
+*.orig
+.cache/
+.parcel-cache/
