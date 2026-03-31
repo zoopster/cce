@@ -61,21 +61,24 @@ async def generate_event_generator(session: ContentSession) -> AsyncGenerator[di
                 "data": json.dumps({"chunk": chunk})
             }
 
-    # Update session status
-    session.status = SessionStatus.READY_FOR_REVIEW
+    # Update session status and load version into memory
+    try:
+        session.status = SessionStatus.READY_FOR_REVIEW
 
-    # Add version to session (it's saved in the agent's generate_stream)
-    from ..tools.memory import read_from_memory
-    version_num = len(session.versions) + 1
-    version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
-    if version_data:
-        version = ContentVersion(
-            version_number=version_data["version_number"],
-            content=version_data["content"],
-            generated_at=version_data["generated_at"]
-        )
-        if not any(v.version_number == version_num for v in session.versions):
-            session.versions.append(version)
+        from ..tools.memory import read_from_memory
+        version_num = len(session.versions) + 1
+        version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
+        if version_data:
+            version = ContentVersion(
+                version_number=version_data["version_number"],
+                content=version_data["content"],
+                generated_at=version_data.get("generated_at"),
+                feedback_applied=version_data.get("feedback_applied")
+            )
+            if not any(v.version_number == version_num for v in session.versions):
+                session.versions.append(version)
+    except Exception:
+        pass
 
     yield {
         "event": "complete",
@@ -181,22 +184,24 @@ async def iterate_event_generator(session: ContentSession, feedback: str) -> Asy
                 "data": json.dumps({"chunk": chunk})
             }
 
-    # Update session status
-    session.status = SessionStatus.READY_FOR_REVIEW
+    # Update session status and load version into memory
+    try:
+        session.status = SessionStatus.READY_FOR_REVIEW
 
-    # Add version to session
-    from ..tools.memory import read_from_memory
-    version_num = len(session.versions) + 1
-    version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
-    if version_data:
-        version = ContentVersion(
-            version_number=version_data["version_number"],
-            content=version_data["content"],
-            feedback_applied=version_data.get("feedback_applied"),
-            generated_at=version_data["generated_at"]
-        )
-        if not any(v.version_number == version_num for v in session.versions):
-            session.versions.append(version)
+        from ..tools.memory import read_from_memory
+        version_num = len(session.versions) + 1
+        version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
+        if version_data:
+            version = ContentVersion(
+                version_number=version_data["version_number"],
+                content=version_data["content"],
+                feedback_applied=version_data.get("feedback_applied"),
+                generated_at=version_data.get("generated_at")
+            )
+            if not any(v.version_number == version_num for v in session.versions):
+                session.versions.append(version)
+    except Exception:
+        pass
 
     yield {
         "event": "complete",
