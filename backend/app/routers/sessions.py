@@ -4,6 +4,8 @@ Session management endpoints.
 Handles CRUD operations for content creation sessions.
 """
 
+from enum import Enum
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -82,8 +84,8 @@ async def get_session(session_id: str):
     return {
         "session_id": session.session_id,
         "topic": session.topic,
-        "status": session.status.value,
-        "complexity": session.complexity.value,
+        "status": session.status.value if isinstance(session.status, Enum) else session.status,
+        "complexity": session.complexity.value if isinstance(session.complexity, Enum) else session.complexity,
         "parameters": session.parameters.model_dump(),
         "research_results_count": len(session.research_results),
         "versions_count": len(session.versions),
