@@ -155,16 +155,35 @@ async def get_current_content(session_id: str):
     """
     session = sessions.get(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        # Try loading from memory
+        session_data = read_from_memory(session_id, "session")
+        if session_data:
+            session = ContentSession(**session_data)
+            sessions[session_id] = session
+        else:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    if not session.versions:
-        raise HTTPException(status_code=404, detail="No content generated yet")
+    # Check in-memory versions first
+    if session.versions:
+        latest = session.versions[-1]
+        return {
+            "session_id": session_id,
+            "version_number": latest.version_number,
+            "content": latest.content,
+            "generated_at": latest.generated_at.isoformat(),
+            "feedback_applied": latest.feedback_applied
+        }
 
-    latest = session.versions[-1]
-    return {
-        "session_id": session_id,
-        "version_number": latest.version_number,
-        "content": latest.content,
-        "generated_at": latest.generated_at.isoformat(),
-        "feedback_applied": latest.feedback_applied
-    }
+    # Fall back to filesystem
+    for i in range(10, 0, -1):
+        version_data = read_from_memory(session_id, f"versions/v{i}")
+        if version_data:
+            return {
+                "session_id": session_id,
+                "version_number": version_data["version_number"],
+                "content": version_data["content"],
+                "generated_at": version_data["generated_at"],
+                "feedback_applied": version_data.get("feedback_applied")
+            }
+
+    raise HTTPException(status_code=404, detail="No content generated yet")

@@ -65,20 +65,17 @@ async def generate_event_generator(session: ContentSession) -> AsyncGenerator[di
     session.status = SessionStatus.READY_FOR_REVIEW
 
     # Add version to session (it's saved in the agent's generate_stream)
-    version_num = len(session.versions)
-    if version_num > 0:
-        # Read the saved version back
-        from ..tools.memory import read_from_memory
-        version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
-        if version_data:
-            version = ContentVersion(
-                version_number=version_data["version_number"],
-                content=version_data["content"],
-                generated_at=version_data["generated_at"]
-            )
-            # Only append if not already in session
-            if not any(v.version_number == version_num for v in session.versions):
-                session.versions.append(version)
+    from ..tools.memory import read_from_memory
+    version_num = len(session.versions) + 1
+    version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
+    if version_data:
+        version = ContentVersion(
+            version_number=version_data["version_number"],
+            content=version_data["content"],
+            generated_at=version_data["generated_at"]
+        )
+        if not any(v.version_number == version_num for v in session.versions):
+            session.versions.append(version)
 
     yield {
         "event": "complete",
@@ -188,19 +185,18 @@ async def iterate_event_generator(session: ContentSession, feedback: str) -> Asy
     session.status = SessionStatus.READY_FOR_REVIEW
 
     # Add version to session
-    version_num = len(session.versions)
-    if version_num > 0:
-        from ..tools.memory import read_from_memory
-        version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
-        if version_data:
-            version = ContentVersion(
-                version_number=version_data["version_number"],
-                content=version_data["content"],
-                feedback_applied=version_data.get("feedback_applied"),
-                generated_at=version_data["generated_at"]
-            )
-            if not any(v.version_number == version_num for v in session.versions):
-                session.versions.append(version)
+    from ..tools.memory import read_from_memory
+    version_num = len(session.versions) + 1
+    version_data = read_from_memory(session.session_id, f"versions/v{version_num}")
+    if version_data:
+        version = ContentVersion(
+            version_number=version_data["version_number"],
+            content=version_data["content"],
+            feedback_applied=version_data.get("feedback_applied"),
+            generated_at=version_data["generated_at"]
+        )
+        if not any(v.version_number == version_num for v in session.versions):
+            session.versions.append(version)
 
     yield {
         "event": "complete",
