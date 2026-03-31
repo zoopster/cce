@@ -13,8 +13,6 @@ import uuid
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from anthropic import Anthropic
-
 from .base import BaseAgent
 from ..tools.search import search_web
 from ..tools.scrape import scrape_url
@@ -175,7 +173,7 @@ Return the indices (0-based) of the most relevant and authoritative sources, sep
 Consider: relevance to task, source authority, content quality.
 Only return the numbers, like: 0, 2, 5"""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=100,
             messages=[{"role": "user", "content": prompt}]
@@ -313,7 +311,7 @@ Provide a {self.task.output_format} that:
 
 Format as markdown."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]

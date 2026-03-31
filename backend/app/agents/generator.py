@@ -13,8 +13,6 @@ import asyncio
 from typing import AsyncGenerator, Dict, Any, Optional
 from datetime import datetime
 
-from anthropic import Anthropic
-
 from .base import BaseAgent
 from ..tools.memory import read_from_memory, save_to_memory, aggregate_research
 from ..models.content import ContentSession, ContentVersion, AgentState
@@ -76,7 +74,7 @@ Create a detailed outline including:
 
 Format as markdown outline."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
@@ -126,7 +124,7 @@ Write in markdown format with:
 
 Write the complete content now:"""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
@@ -189,12 +187,12 @@ Write in markdown format. Write the complete content:"""
 
         content_parts = []
 
-        with self.client.messages.stream(
+        async with self.client.messages.stream(
             model="claude-sonnet-4-20250514",
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         ) as stream:
-            for text in stream.text_stream:
+            async for text in stream.text_stream:
                 content_parts.append(text)
                 yield text
 

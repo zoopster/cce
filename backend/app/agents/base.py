@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any, List, Optional
 
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from ..models import AgentState
 
@@ -25,7 +25,7 @@ class BaseAgent:
         """
         self.session_id = session_id
         self.agent_id = agent_id or str(uuid.uuid4())
-        self.client = Anthropic()
+        self.client = AsyncAnthropic()
         self.memory_path = Path(f"app/memory/{session_id}")
         self.memory_path.mkdir(parents=True, exist_ok=True)
         self.tool_calls = 0

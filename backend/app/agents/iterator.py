@@ -13,8 +13,6 @@ import asyncio
 from typing import AsyncGenerator, Dict, Any, Optional, List
 from datetime import datetime
 
-from anthropic import Anthropic
-
 from .base import BaseAgent
 from .research import ResearchTask, run_parallel_research
 from ..tools.memory import read_from_memory, save_to_memory, aggregate_research
@@ -73,7 +71,7 @@ Respond in JSON format:
   "research_queries": ["queries if research needed"]
 }}"""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}]
@@ -134,7 +132,7 @@ CONTENT PARAMETERS:
 
 Rewrite the content incorporating the feedback. Maintain the overall structure unless the feedback specifically requests structural changes. Output only the revised content in markdown format."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
@@ -193,12 +191,12 @@ Rewrite incorporating the feedback. Output only the revised markdown content."""
 
         content_parts = []
 
-        with self.client.messages.stream(
+        async with self.client.messages.stream(
             model="claude-sonnet-4-20250514",
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         ) as stream:
-            for text in stream.text_stream:
+            async for text in stream.text_stream:
                 content_parts.append(text)
                 yield text
 

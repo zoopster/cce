@@ -16,8 +16,6 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import json
 
-from anthropic import Anthropic
-
 from .base import BaseAgent
 from .research import ResearchSubagent, ResearchTask, run_parallel_research
 from ..tools.memory import save_to_memory, read_from_memory, aggregate_research
@@ -67,7 +65,7 @@ Classify as one of:
 
 Respond with just one word: SIMPLE, MODERATE, or COMPLEX"""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=10,
             messages=[{"role": "user", "content": prompt}]
@@ -123,7 +121,7 @@ Format your response as a JSON array:
 
 Only output the JSON array, no other text."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
@@ -221,7 +219,7 @@ Create a unified research summary that:
 
 Format as markdown with clear sections."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
@@ -257,7 +255,7 @@ Consider:
 
 Respond with just YES or NO."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=5,
             messages=[{"role": "user", "content": prompt}]
@@ -309,7 +307,7 @@ Create 1-2 targeted research tasks to fill the gaps.
 Format as JSON array with objective and search_queries.
 If no gaps, respond with empty array []."""
 
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}]
