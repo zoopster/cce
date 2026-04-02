@@ -4,6 +4,7 @@ Session management endpoints.
 Handles CRUD operations for content creation sessions.
 """
 
+import logging
 from enum import Enum
 
 from fastapi import APIRouter, HTTPException
@@ -15,6 +16,8 @@ import uuid
 from ..models.content import ContentSession, SessionStatus, Complexity, AgentState
 from ..models.parameters import GenerationParameters
 from ..tools.memory import save_to_memory, read_from_memory, clear_session_memory
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -53,6 +56,7 @@ async def create_session(request: CreateSessionRequest):
         parameters=request.parameters or GenerationParameters()
     )
     sessions[session.session_id] = session
+    logger.info("Created session %s | topic: %s | source_url: %s", session.session_id, request.topic, request.source_url)
 
     # Save to memory
     save_to_memory(session.session_id, "session", session.model_dump())

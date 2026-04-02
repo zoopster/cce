@@ -4,11 +4,15 @@ Content generation endpoints with SSE streaming.
 Handles initial content generation and iterative refinement.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 from typing import AsyncGenerator
 import json
+
+logger = logging.getLogger(__name__)
 
 from ..agents.generator import ContentGeneratorAgent
 from ..agents.iterator import IteratorAgent
@@ -24,6 +28,7 @@ async def generate_event_generator(session: ContentSession) -> AsyncGenerator[di
 
     Streams outline first, then content generation in real-time.
     """
+    logger.info("Starting content generation for session %s", session.session_id)
     generator = ContentGeneratorAgent(session)
     session.agents.append(generator.get_state())
 
@@ -36,30 +41,41 @@ async def generate_event_generator(session: ContentSession) -> AsyncGenerator[di
     }
 
     # Stream the generation process
-    async for chunk in generator.generate_stream():
-        if chunk.startswith("[OUTLINE]"):
-            # Extract outline content
-            outline_content = chunk.replace("[OUTLINE]\n", "")
-            yield {
-                "event": "outline",
-                "data": json.dumps({
-                    "content": outline_content,
-                    "message": "Content outline created"
-                })
-            }
-        elif chunk.startswith("[CONTENT]"):
-            yield {
-                "event": "content_start",
-                "data": json.dumps({
-                    "message": "Generating content..."
-                })
-            }
-        else:
-            # Stream content chunks
-            yield {
-                "event": "content",
-                "data": json.dumps({"chunk": chunk})
-            }
+    chunk_count = 0
+    try:
+        async for chunk in generator.generate_stream():
+            if chunk.startswith("[OUTLINE]"):
+                logger.debug("Outline received for session %s", session.session_id)
+                outline_content = chunk.replace("[OUTLINE]\n", "")
+                yield {
+                    "event": "outline",
+                    "data": json.dumps({
+                        "content": outline_content,
+                        "message": "Content outline created"
+                    })
+                }
+            elif chunk.startswith("[CONTENT]"):
+                logger.debug("Content stream starting for session %s", session.session_id)
+                yield {
+                    "event": "content_start",
+                    "data": json.dumps({
+                        "message": "Generating content..."
+                    })
+                }
+            else:
+                chunk_count += 1
+                yield {
+                    "event": "content",
+                    "data": json.dumps({"chunk": chunk})
+                }
+    except Exception as e:
+        logger.error("Error during content streaming for session %s: %s", session.session_id, e, exc_info=True)
+        yield {
+            "event": "error",
+            "data": json.dumps({"message": f"Generation error: {str(e)}"})
+        }
+
+    logger.info("Content stream finished for session %s (%d chunks)", session.session_id, chunk_count)
 
     # Update session status and load version into memory
     try:
@@ -77,9 +93,13 @@ async def generate_event_generator(session: ContentSession) -> AsyncGenerator[di
             )
             if not any(v.version_number == version_num for v in session.versions):
                 session.versions.append(version)
-    except Exception:
-        pass
+            logger.debug("Loaded version v%d into session %s", version_num, session.session_id)
+        else:
+            logger.warning("Could not load version v%d from memory for session %s", version_num, session.session_id)
+    except Exception as e:
+        logger.error("Error loading version into session %s: %s", session.session_id, e, exc_info=True)
 
+    logger.info("Sending 'complete' event for session %s", session.session_id)
     yield {
         "event": "complete",
         "data": json.dumps({
@@ -104,12 +124,16 @@ async def generate_content(session_id: str):
     - content: Streaming content chunks
     - complete: Generation finished
     """
+    logger.info("Generate request for session %s", session_id)
     session = sessions.get(session_id)
     if not session:
+        logger.warning("Session %s not found", session_id)
         raise HTTPException(status_code=404, detail="Session not found")
 
+    logger.debug("Session %s status: %s", session_id, session.status)
     # Validate that research is complete
     if session.status not in ["ready_for_generation", "ready_for_review", "iterating"]:
+        logger.warning("Session %s not ready for generation (status: %s)", session_id, session.status)
         raise HTTPException(
             status_code=400,
             detail=f"Cannot generate: session must have completed research first (current status: {session.status.value})"
@@ -131,6 +155,7 @@ async def iterate_event_generator(session: ContentSession, feedback: str) -> Asy
 
     Streams feedback analysis, optional research, and revised content.
     """
+    logger.info("Starting iteration for session %s", session.session_id)
     iterator = IteratorAgent(session)
     session.agents.append(iterator.get_state())
 
@@ -143,46 +168,58 @@ async def iterate_event_generator(session: ContentSession, feedback: str) -> Asy
     }
 
     # Stream the iteration process
-    async for chunk in iterator.iterate_stream(feedback):
-        if chunk.startswith("[ANALYSIS]"):
-            # Extract analysis content
-            analysis_content = chunk.replace("[ANALYSIS]\n", "")
-            yield {
-                "event": "analysis",
-                "data": json.dumps({
-                    "content": analysis_content,
-                    "message": "Feedback analyzed"
-                })
-            }
-        elif chunk.startswith("[RESEARCHING"):
-            yield {
-                "event": "status",
-                "data": json.dumps({
-                    "phase": "researching",
-                    "message": "Gathering additional information..."
-                })
-            }
-        elif chunk.startswith("[RESEARCH COMPLETE]"):
-            yield {
-                "event": "status",
-                "data": json.dumps({
-                    "phase": "revising",
-                    "message": "Additional research complete, revising content..."
-                })
-            }
-        elif chunk.startswith("[REVISED"):
-            yield {
-                "event": "content_start",
-                "data": json.dumps({
-                    "message": "Generating revised content..."
-                })
-            }
-        else:
-            # Stream revised content chunks
-            yield {
-                "event": "content",
-                "data": json.dumps({"chunk": chunk})
-            }
+    chunk_count = 0
+    try:
+        async for chunk in iterator.iterate_stream(feedback):
+            if chunk.startswith("[ANALYSIS]"):
+                logger.debug("Feedback analysis received for session %s", session.session_id)
+                analysis_content = chunk.replace("[ANALYSIS]\n", "")
+                yield {
+                    "event": "analysis",
+                    "data": json.dumps({
+                        "content": analysis_content,
+                        "message": "Feedback analyzed"
+                    })
+                }
+            elif chunk.startswith("[RESEARCHING"):
+                logger.debug("Additional research starting for session %s", session.session_id)
+                yield {
+                    "event": "status",
+                    "data": json.dumps({
+                        "phase": "researching",
+                        "message": "Gathering additional information..."
+                    })
+                }
+            elif chunk.startswith("[RESEARCH COMPLETE]"):
+                yield {
+                    "event": "status",
+                    "data": json.dumps({
+                        "phase": "revising",
+                        "message": "Additional research complete, revising content..."
+                    })
+                }
+            elif chunk.startswith("[REVISED"):
+                logger.debug("Revised content streaming for session %s", session.session_id)
+                yield {
+                    "event": "content_start",
+                    "data": json.dumps({
+                        "message": "Generating revised content..."
+                    })
+                }
+            else:
+                chunk_count += 1
+                yield {
+                    "event": "content",
+                    "data": json.dumps({"chunk": chunk})
+                }
+    except Exception as e:
+        logger.error("Error during iteration streaming for session %s: %s", session.session_id, e, exc_info=True)
+        yield {
+            "event": "error",
+            "data": json.dumps({"message": f"Iteration error: {str(e)}"})
+        }
+
+    logger.info("Iteration stream finished for session %s (%d chunks)", session.session_id, chunk_count)
 
     # Update session status and load version into memory
     try:
@@ -200,9 +237,13 @@ async def iterate_event_generator(session: ContentSession, feedback: str) -> Asy
             )
             if not any(v.version_number == version_num for v in session.versions):
                 session.versions.append(version)
-    except Exception:
-        pass
+            logger.debug("Loaded version v%d into session %s", version_num, session.session_id)
+        else:
+            logger.warning("Could not load version v%d from memory for session %s", version_num, session.session_id)
+    except Exception as e:
+        logger.error("Error loading version into session %s: %s", session.session_id, e, exc_info=True)
 
+    logger.info("Sending 'complete' event for iteration session %s", session.session_id)
     yield {
         "event": "complete",
         "data": json.dumps({

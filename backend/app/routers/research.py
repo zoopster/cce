@@ -4,10 +4,14 @@ Research endpoints with SSE streaming.
 Handles the multi-agent research process with real-time updates.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
 from typing import AsyncGenerator
 import json
+
+logger = logging.getLogger(__name__)
 
 from ..agents.lead import LeadAgent
 from ..models.content import ContentSession
@@ -23,6 +27,7 @@ async def research_event_generator(session: ContentSession) -> AsyncGenerator[di
 
     Streams real-time updates as the lead agent coordinates research subagents.
     """
+    logger.info("Starting research for session %s", session.session_id)
     lead_agent = LeadAgent(session)
     session.agents.append(lead_agent.get_state())
 
@@ -36,6 +41,7 @@ async def research_event_generator(session: ContentSession) -> AsyncGenerator[di
     }
 
     session.complexity = await lead_agent.analyze_complexity()
+    logger.info("Session %s complexity: %s", session.session_id, session.complexity.value)
 
     yield {
         "event": "complexity",
@@ -55,6 +61,7 @@ async def research_event_generator(session: ContentSession) -> AsyncGenerator[di
     }
 
     plan = await lead_agent.create_research_plan()
+    logger.info("Session %s research plan: %d tasks", session.session_id, len(plan["tasks"]))
 
     yield {
         "event": "plan",
@@ -75,6 +82,7 @@ async def research_event_generator(session: ContentSession) -> AsyncGenerator[di
     }
 
     research_result = await lead_agent.execute_research(plan)
+    logger.info("Session %s research done: %d/%d agents succeeded", session.session_id, research_result["successful"], research_result["num_agents"])
 
     yield {
         "event": "research_progress",
@@ -95,12 +103,14 @@ async def research_event_generator(session: ContentSession) -> AsyncGenerator[di
     }
 
     synthesis = await lead_agent.synthesize_findings()
+    logger.info("Session %s synthesis complete", session.session_id)
 
     # Update session
     session.status = "ready_for_generation"
 
     # Get aggregated results
     aggregated = aggregate_research(session.session_id)
+    logger.info("Session %s research complete: %d total sources", session.session_id, aggregated["total_sources"])
 
     yield {
         "event": "complete",

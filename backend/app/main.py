@@ -2,6 +2,7 @@
 Content Creation Engine - Main FastAPI application.
 """
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -9,6 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .routers import sessions_router, research_router, generate_router, publish_router
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG if settings.debug else logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 # Create FastAPI application
 app = FastAPI(
@@ -39,12 +48,9 @@ async def startup_event():
     # Ensure memory directory exists
     memory_path = Path(settings.memory_base_path)
     memory_path.mkdir(parents=True, exist_ok=True)
-    print(f"Memory directory initialized at: {memory_path.absolute()}")
-    print("API endpoints ready:")
-    print("  - Sessions: /api/sessions")
-    print("  - Research: /api/sessions/{id}/research")
-    print("  - Generate: /api/sessions/{id}/generate")
-    print("  - Publish: /api/sessions/{id}/publish/*")
+    logger.info("Memory directory initialized at: %s", memory_path.absolute())
+    logger.info("Debug mode: %s", settings.debug)
+    logger.info("API endpoints ready: sessions, research, generate, publish")
 
 
 @app.get("/health")

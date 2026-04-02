@@ -10,10 +10,13 @@ Key responsibilities:
 """
 
 import asyncio
+import logging
 from typing import AsyncGenerator, Dict, Any, Optional
 from datetime import datetime
 
 from .base import BaseAgent
+
+logger = logging.getLogger(__name__)
 from ..tools.memory import read_from_memory, save_to_memory, aggregate_research
 from ..models.content import ContentSession, ContentVersion, AgentState
 from ..models.parameters import GenerationParameters
@@ -37,9 +40,11 @@ class ContentGeneratorAgent(BaseAgent):
         """Read synthesized research from filesystem."""
         synthesis = read_from_memory(self.session_id, "synthesis")
         if synthesis:
+            logger.debug("Read synthesis for session %s (%d chars)", self.session_id, len(synthesis.get("content", "")))
             return synthesis.get("content", "")
 
         # Fallback to aggregating raw research
+        logger.debug("No synthesis found for session %s, aggregating raw research", self.session_id)
         aggregated = aggregate_research(self.session_id)
         return "\n\n".join(aggregated.get("findings", []))
 
@@ -190,12 +195,15 @@ Write the complete content now:"""
         """
         self.status = "generating"
         self.current_task = "streaming content generation"
+        logger.info("generate_stream started for session %s", self.session_id)
 
         # Read research
         research = await self.read_research()
+        logger.debug("Research loaded (%d chars)", len(research))
 
         # Plan structure
         outline = await self.plan_structure(research)
+        logger.debug("Outline planned (%d chars)", len(outline))
         yield f"[OUTLINE]\n{outline}\n\n[CONTENT]\n"
 
         params = self.session.parameters
@@ -223,6 +231,7 @@ REQUIREMENTS:
 Write in markdown format with inline citations as markdown links [source title](url) and a "Sources" section at the end. Write the complete content:"""
 
         content_parts = []
+        logger.debug("Starting Anthropic stream for session %s", self.session_id)
 
         async with self.client.messages.stream(
             model="claude-sonnet-4-20250514",
@@ -235,6 +244,7 @@ Write in markdown format with inline citations as markdown links [source title](
 
         # Save complete version
         full_content = "".join(content_parts)
+        logger.info("Stream complete for session %s (%d chars generated)", self.session_id, len(full_content))
         version_num = len(self.session.versions) + 1
 
         save_to_memory(self.session_id, f"versions/v{version_num}", {
@@ -242,6 +252,7 @@ Write in markdown format with inline citations as markdown links [source title](
             "content": full_content,
             "generated_at": datetime.utcnow().isoformat()
         })
+        logger.debug("Saved version v%d for session %s", version_num, self.session_id)
 
         self.status = "complete"
 
