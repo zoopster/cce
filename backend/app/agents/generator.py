@@ -43,6 +43,24 @@ class ContentGeneratorAgent(BaseAgent):
         aggregated = aggregate_research(self.session_id)
         return "\n\n".join(aggregated.get("findings", []))
 
+    def _collect_source_urls(self) -> str:
+        """Collect all source URLs from research and the original article."""
+        urls = []
+
+        # Include original source URL
+        if self.session.source_url:
+            urls.append(f"- ORIGINAL ARTICLE: {self.session.source_url}")
+
+        # Collect URLs from research findings
+        aggregated = aggregate_research(self.session_id)
+        for source in aggregated.get("sources", []):
+            url = source.get("url", "")
+            title = source.get("title", "")
+            if url:
+                urls.append(f"- {title}: {url}" if title else f"- {url}")
+
+        return "\n".join(urls) if urls else "None"
+
     async def plan_structure(self, research: str) -> str:
         """
         Use extended thinking to plan content structure.
@@ -52,9 +70,12 @@ class ContentGeneratorAgent(BaseAgent):
 
         params = self.session.parameters
 
+        source_urls = self._collect_source_urls()
+
         prompt = f"""Plan the structure for this content:
 
 TOPIC: {self.session.topic}
+{f'ORIGINAL ARTICLE URL: {self.session.source_url}' if self.session.source_url else ''}
 TYPE: {params.content_type.value}
 TONE: {params.tone.value}
 AUDIENCE: {params.audience_level.value}
@@ -65,12 +86,16 @@ CUSTOM INSTRUCTIONS: {params.custom_instructions or 'None'}
 RESEARCH SUMMARY:
 {research[:3000]}
 
+SOURCE URLS (cite these in the content):
+{source_urls}
+
 Create a detailed outline including:
 1. Title (compelling, SEO-friendly)
 2. Introduction approach
 3. Main sections with key points
 4. Conclusion approach
 5. Estimated word count per section
+6. Where to place source citations
 
 Format as markdown outline."""
 
@@ -99,6 +124,8 @@ Format as markdown outline."""
 
         params = self.session.parameters
 
+        source_urls = self._collect_source_urls()
+
         prompt = f"""Write a {params.content_type.value} based on this outline and research.
 
 OUTLINE:
@@ -106,6 +133,9 @@ OUTLINE:
 
 RESEARCH:
 {research[:4000]}
+
+SOURCE URLS (you MUST cite these using markdown links):
+{source_urls}
 
 REQUIREMENTS:
 - Tone: {params.tone.value}
@@ -121,6 +151,8 @@ Write in markdown format with:
 - Well-structured body with examples
 - Strong conclusion
 - Appropriate for {params.audience_level.value} readers
+- Inline citations as markdown links [source title](url) where claims reference sources
+- A "Sources" or "References" section at the end listing all cited URLs
 
 Write the complete content now:"""
 
@@ -168,6 +200,8 @@ Write the complete content now:"""
 
         params = self.session.parameters
 
+        source_urls = self._collect_source_urls()
+
         prompt = f"""Write a {params.content_type.value} based on this outline and research.
 
 OUTLINE:
@@ -176,6 +210,9 @@ OUTLINE:
 RESEARCH:
 {research[:4000]}
 
+SOURCE URLS (you MUST cite these using markdown links):
+{source_urls}
+
 REQUIREMENTS:
 - Tone: {params.tone.value}
 - Audience: {params.audience_level.value}
@@ -183,7 +220,7 @@ REQUIREMENTS:
 - Keywords: {', '.join(params.keywords) or 'None'}
 - {params.custom_instructions or ''}
 
-Write in markdown format. Write the complete content:"""
+Write in markdown format with inline citations as markdown links [source title](url) and a "Sources" section at the end. Write the complete content:"""
 
         content_parts = []
 

@@ -66,6 +66,7 @@ class ContentSession(BaseModel):
 
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     topic: str
+    source_url: Optional[str] = None
     parameters: GenerationParameters
     status: SessionStatus = SessionStatus.CREATED
     complexity: Complexity = Complexity.MODERATE

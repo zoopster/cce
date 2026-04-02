@@ -130,7 +130,7 @@ CONTENT PARAMETERS:
 - Audience: {self.session.parameters.audience_level.value}
 - Target length: {self.session.parameters.word_count} words
 
-Rewrite the content incorporating the feedback. Maintain the overall structure unless the feedback specifically requests structural changes. Output only the revised content in markdown format."""
+Rewrite the content incorporating the feedback. Maintain the overall structure unless the feedback specifically requests structural changes. IMPORTANT: Preserve all existing source citations and markdown links. Output only the revised content in markdown format."""
 
         response = await self.client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -187,7 +187,7 @@ ORIGINAL CONTENT:
 USER FEEDBACK: {feedback}
 CHANGES NEEDED: {analysis.get('specific_changes')}
 
-Rewrite incorporating the feedback. Output only the revised markdown content."""
+Rewrite incorporating the feedback. IMPORTANT: Preserve all existing source citations and markdown links. Output only the revised markdown content."""
 
         content_parts = []
 

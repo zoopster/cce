@@ -26,6 +26,7 @@ sessions: Dict[str, ContentSession] = {}
 class CreateSessionRequest(BaseModel):
     """Request body for creating a new session."""
     topic: str
+    source_url: Optional[str] = None
     parameters: Optional[GenerationParameters] = None
 
 
@@ -48,6 +49,7 @@ async def create_session(request: CreateSessionRequest):
     session = ContentSession(
         session_id=str(uuid.uuid4()),
         topic=request.topic,
+        source_url=request.source_url,
         parameters=request.parameters or GenerationParameters()
     )
     sessions[session.session_id] = session
