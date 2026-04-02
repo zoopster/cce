@@ -3,6 +3,7 @@ Content Creation Engine - Main FastAPI application.
 """
 
 import logging
+import logging.handlers
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -12,11 +13,27 @@ from .config import settings
 from .routers import sessions_router, research_router, generate_router, publish_router
 
 # Configure logging
+log_level = logging.DEBUG if settings.debug else logging.INFO
+log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+
 logging.basicConfig(
-    level=logging.DEBUG if settings.debug else logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    level=log_level,
+    format=log_format,
     datefmt="%H:%M:%S",
 )
+
+# Add file handler
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True)
+file_handler = logging.handlers.RotatingFileHandler(
+    log_dir / "cce.log",
+    maxBytes=10 * 1024 * 1024,  # 10 MB
+    backupCount=5,
+)
+file_handler.setLevel(log_level)
+file_handler.setFormatter(logging.Formatter(log_format, datefmt="%Y-%m-%d %H:%M:%S"))
+logging.getLogger().addHandler(file_handler)
+
 logger = logging.getLogger(__name__)
 
 # Create FastAPI application
